@@ -44,41 +44,65 @@ router.get('/', ensureAuth, async(req, res) => {
 // @desc    Show edit page
 // @route   GET /stories/edit/:id
 router.get('/edit/:id', ensureAuth, async(req, res) => {
-    const story = await Story.findById({
-        _id: req.params.id
-    }).lean()
-
-    if(!story) {
-        res.render('error/404')
+    try {
+        const story = await Story.findById({
+            _id: req.params.id
+        }).lean()
+    
+        if(!story) {
+            res.render('error/404')
+        }
+    
+        if(story.user != req.user.id) {
+            res.redirect('/stories')
+        } else {
+            res.render('stories/edit', {
+                story
+            })
+        }
+    } catch (error) {
+        console.error(error)
+        return res.render('error/500')
     }
-
-    if(story.user != req.user.id) {
-        res.redirect('/stories')
-    } else {
-        res.render('stories/edit', {
-            story
-        })
-    }
+    
 })
 
 // @desc    Update story
 // @route   PUT /stories/:id
 router.put('/:id', ensureAuth, async(req, res) => {
-    let story = await Story.findById(req.params.id).lean()
+    try {
+        let story = await Story.findById(req.params.id).lean()
 
-    if(!story) {
-        res.render('error/404')
+        if(!story) {
+            res.render('error/404')
+        }
+
+        if(story.user != req.user.id) {
+            res.redirect('/stories')
+        } else {
+            story = await Story.findOneAndUpdate({ _id: req.params.id }, req.body, {
+                new: true,
+                runValidators: true
+            })
+
+            res.redirect('/dashboard')
+        }
+    } catch (error) {
+        console.error(error)
+        return res.render('error/500')
     }
+    
+})
 
-    if(story.user != req.user.id) {
-        res.redirect('/stories')
-    } else {
-        story = await Story.findOneAndUpdate({ _id: req.params.id }, req.body, {
-            new: true,
-            runValidators: true
-        })
-
+// @desc    Delete story
+// @route   DELETE /stories/:id
+router.delete('/:id', ensureAuth, async(req, res) => {
+    try {
+        await Story.remove({ _id: req.params.id})
         res.redirect('/dashboard')
+    } catch (error) {
+        console.error(error)
+        return res.render('error/500')
     }
 })
 
